@@ -42,6 +42,7 @@ struct PlayMode : Mode {
 	std::queue<Prompt> prompts; 
 
 	std::vector<Scene::Transform*> zees;
+	int next[16] = {9,6,3,2,13,7,1,5,10,0,8,12,11,4,15,15};
 
 	//player info:
 	struct Player {

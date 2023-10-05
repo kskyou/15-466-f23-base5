@@ -67,7 +67,8 @@ PlayMode::PlayMode() : scene(*phonebank_scene) {
 	player.at = walkmesh->nearest_walk_point(player.transform->position);
 
 	prompts.push(Prompt("Mouse motion looks; WASD moves; escape ungrabs mouse", 5.0f));
-	prompts.push(Prompt("You wake up", 5.0f));
+	prompts.push(Prompt("Press f to walk to next area", 5.0f));
+	prompts.push(Prompt("Get out of the mountains!", 5.0f));
 
 	for (auto &transform : scene.transforms) {
 
@@ -160,10 +161,16 @@ void PlayMode::update(float elapsed) {
 	}
 	if (action.pressed && cooldown == 0.0f){
 
-		for (uint32_t i=0; i<15; i++){
-			if (glm::length(player.transform->position - zees[i]->position) < 5.0f){
-				player.at = walkmesh->nearest_walk_point(zees[(i+1) % 15]->position);
+		for (uint32_t i=0; i<16; i++){
+			if (glm::length(player.transform->position - zees[i]->position) < 6.0f){
+				int nexti = next[i];
+				player.at = walkmesh->nearest_walk_point(zees[nexti]->position);
+				player.transform->rotation = glm::angleAxis(glm::radians(90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
+				player.transform->rotation *= glm::angleAxis(2.09f * (nexti % 3) , glm::vec3(0.0f, 0.0f, 1.0f));
 				cooldown = 1.0f;
+				if (nexti == 15){
+					prompts.push(Prompt("You win!", 10.0f));
+				}
 				break;
 			}
 		}
