@@ -2,7 +2,7 @@
 
 Author: Kevin You
 
-Design: In this game, you are trying to escape a maze situated in the mountains. Warpping in the maze prevents your normal direction and insight from working. 
+Design: In this game, you are trying to escape a maze situated in the mountains. Warpping in the maze prevents your normal sense of direction from working. 
 
 Screen Shot:
 
