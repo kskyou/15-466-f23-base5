@@ -6,7 +6,7 @@
 #include <glm/glm.hpp>
 
 #include <vector>
-#include <deque>
+#include <queue>
 
 struct PlayMode : Mode {
 	PlayMode();
@@ -23,10 +23,25 @@ struct PlayMode : Mode {
 	struct Button {
 		uint8_t downs = 0;
 		uint8_t pressed = 0;
-	} left, right, down, up;
+	} left, right, down, up, action;
 
 	//local copy of the game scene (so code can change it during gameplay):
 	Scene scene;
+
+	//int gamestate = 0;
+	float cooldown = 0.0f;
+
+	struct Prompt {
+		std::string text;
+		float time;
+		Prompt(std::string text_, float time_){
+			text = text_;
+			time = time_;
+		}
+	};
+	std::queue<Prompt> prompts; 
+
+	std::vector<Scene::Transform*> zees;
 
 	//player info:
 	struct Player {

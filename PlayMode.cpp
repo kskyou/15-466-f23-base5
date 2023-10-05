@@ -15,13 +15,13 @@
 
 GLuint phonebank_meshes_for_lit_color_texture_program = 0;
 Load< MeshBuffer > phonebank_meshes(LoadTagDefault, []() -> MeshBuffer const * {
-	MeshBuffer const *ret = new MeshBuffer(data_path("phone-bank.pnct"));
+	MeshBuffer const *ret = new MeshBuffer(data_path("test.pnct"));
 	phonebank_meshes_for_lit_color_texture_program = ret->make_vao_for_program(lit_color_texture_program->program);
 	return ret;
 });
 
 Load< Scene > phonebank_scene(LoadTagDefault, []() -> Scene const * {
-	return new Scene(data_path("phone-bank.scene"), [&](Scene &scene, Scene::Transform *transform, std::string const &mesh_name){
+	return new Scene(data_path("test.scene"), [&](Scene &scene, Scene::Transform *transform, std::string const &mesh_name){
 		Mesh const &mesh = phonebank_meshes->lookup(mesh_name);
 
 		scene.drawables.emplace_back(transform);
@@ -39,7 +39,7 @@ Load< Scene > phonebank_scene(LoadTagDefault, []() -> Scene const * {
 
 WalkMesh const *walkmesh = nullptr;
 Load< WalkMeshes > phonebank_walkmeshes(LoadTagDefault, []() -> WalkMeshes const * {
-	WalkMeshes *ret = new WalkMeshes(data_path("phone-bank.w"));
+	WalkMeshes *ret = new WalkMeshes(data_path("test.w"));
 	walkmesh = &ret->lookup("WalkMesh");
 	return ret;
 });
@@ -65,6 +65,16 @@ PlayMode::PlayMode() : scene(*phonebank_scene) {
 
 	//start player walking at nearest walk point:
 	player.at = walkmesh->nearest_walk_point(player.transform->position);
+
+	prompts.push(Prompt("Mouse motion looks; WASD moves; escape ungrabs mouse", 5.0f));
+	prompts.push(Prompt("You wake up", 5.0f));
+
+	for (auto &transform : scene.transforms) {
+
+		if (transform.name.substr(0, 3) == "Zee"){
+			zees.push_back(&transform);
+		}
+	}
 
 }
 
@@ -93,6 +103,10 @@ bool PlayMode::handle_event(SDL_Event const &evt, glm::uvec2 const &window_size)
 			down.downs += 1;
 			down.pressed = true;
 			return true;
+		} else if (evt.key.keysym.sym == SDLK_f) {
+			action.downs += 1;
+			action.pressed = true;
+			return true;
 		}
 	} else if (evt.type == SDL_KEYUP) {
 		if (evt.key.keysym.sym == SDLK_a) {
@@ -106,6 +120,9 @@ bool PlayMode::handle_event(SDL_Event const &evt, glm::uvec2 const &window_size)
 			return true;
 		} else if (evt.key.keysym.sym == SDLK_s) {
 			down.pressed = false;
+			return true;
+		} else if (evt.key.keysym.sym == SDLK_f) {
+			action.pressed = false;
 			return true;
 		}
 	} else if (evt.type == SDL_MOUSEBUTTONDOWN) {
@@ -137,8 +154,24 @@ bool PlayMode::handle_event(SDL_Event const &evt, glm::uvec2 const &window_size)
 }
 
 void PlayMode::update(float elapsed) {
+
+	if (cooldown > 0.0f) {
+		cooldown = std::max(cooldown - elapsed, 0.0f);
+	}
+	if (action.pressed && cooldown == 0.0f){
+
+		for (uint32_t i=0; i<15; i++){
+			if (glm::length(player.transform->position - zees[i]->position) < 5.0f){
+				player.at = walkmesh->nearest_walk_point(zees[(i+1) % 15]->position);
+				cooldown = 1.0f;
+				break;
+			}
+		}
+	}
+
 	//player walking:
 	{
+
 		//combine inputs into a move:
 		constexpr float PlayerSpeed = 3.0f;
 		glm::vec2 move = glm::vec2(0.0f);
@@ -157,6 +190,11 @@ void PlayMode::update(float elapsed) {
 		// some awkward case, code will not infinite loop:
 		for (uint32_t iter = 0; iter < 10; ++iter) {
 			if (remain == glm::vec3(0.0f)) break;
+
+			if (isinf(remain.x)) remain.x = 0;
+			if (isinf(remain.y)) remain.y = 0;
+			if (isinf(remain.z)) remain.z = 0;
+
 			WalkPoint end;
 			float time;
 			walkmesh->walk_in_triangle(player.at, remain, &end, &time);
@@ -202,6 +240,7 @@ void PlayMode::update(float elapsed) {
 
 		//update player's position to respect walking:
 		player.transform->position = walkmesh->to_world_point(player.at);
+		//std::cout << player.transform->position.x << "\n"; 
 
 		{ //update player's rotation to respect local (smooth) up-vector:
 			
@@ -227,6 +266,14 @@ void PlayMode::update(float elapsed) {
 	right.downs = 0;
 	up.downs = 0;
 	down.downs = 0;
+
+	//text prompt
+	if (!prompts.empty()) {
+		prompts.front().time -= elapsed;
+		if (prompts.front().time < 0.0f){
+			prompts.pop();
+		}
+	}
 }
 
 void PlayMode::draw(glm::uvec2 const &drawable_size) {
@@ -273,15 +320,18 @@ void PlayMode::draw(glm::uvec2 const &drawable_size) {
 		));
 
 		constexpr float H = 0.09f;
+		/*
 		lines.draw_text("Mouse motion looks; WASD moves; escape ungrabs mouse",
 			glm::vec3(-aspect + 0.1f * H, -1.0 + 0.1f * H, 0.0),
 			glm::vec3(H, 0.0f, 0.0f), glm::vec3(0.0f, H, 0.0f),
-			glm::u8vec4(0x00, 0x00, 0x00, 0x00));
-		float ofs = 2.0f / drawable_size.y;
-		lines.draw_text("Mouse motion looks; WASD moves; escape ungrabs mouse",
-			glm::vec3(-aspect + 0.1f * H + ofs, -1.0 + + 0.1f * H + ofs, 0.0),
-			glm::vec3(H, 0.0f, 0.0f), glm::vec3(0.0f, H, 0.0f),
-			glm::u8vec4(0xff, 0xff, 0xff, 0x00));
+			glm::u8vec4(0x00, 0x00, 0x00, 0x00)); */
+		if (!prompts.empty()){
+			float ofs = 2.0f / drawable_size.y;
+			lines.draw_text(prompts.front().text,
+				glm::vec3(0.1f -aspect + 0.1f * H + ofs, 0.1 -1.0 + + 0.1f * H + ofs, 0.0),
+				glm::vec3(H, 0.0f, 0.0f), glm::vec3(0.0f, H, 0.0f),
+				glm::u8vec4(0xff, 0xff, 0xff, 0x00));
+		}
 	}
 	GL_ERRORS();
 }
