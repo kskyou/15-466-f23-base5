@@ -10,7 +10,6 @@ dist/README-harfbuzz.txt
 dist/game.ilk
 dist/game.pdb
 dist/SDL2.dll
-dist/game
 dist/game.exe
 dist/freetype-test*
 scenes/show-meshes*

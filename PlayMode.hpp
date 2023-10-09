@@ -30,6 +30,7 @@ struct PlayMode : Mode {
 
 	//int gamestate = 0;
 	float cooldown = 0.0f;
+	bool closeto = false;
 
 	struct Prompt {
 		std::string text;

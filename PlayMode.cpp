@@ -64,11 +64,11 @@ PlayMode::PlayMode() : scene(*phonebank_scene) {
 	player.camera->transform->rotation = glm::angleAxis(glm::radians(90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
 
 	//start player walking at nearest walk point:
-	player.at = walkmesh->nearest_walk_point(player.transform->position);
+	player.at = walkmesh->nearest_walk_point(glm::vec3(-2.0f, -2.0f, 0.0f));
 
 	prompts.push(Prompt("Mouse motion looks; WASD moves; escape ungrabs mouse", 5.0f));
-	prompts.push(Prompt("Press f to walk to next area", 5.0f));
-	prompts.push(Prompt("Get out of the mountains!", 5.0f));
+	prompts.push(Prompt("Press f to move to next area", 5.0f));
+	prompts.push(Prompt("Escape the mountain!", 5.0f));
 
 	for (auto &transform : scene.transforms) {
 
@@ -143,8 +143,8 @@ bool PlayMode::handle_event(SDL_Event const &evt, glm::uvec2 const &window_size)
 			float pitch = glm::pitch(player.camera->transform->rotation);
 			pitch += motion.y * player.camera->fovy;
 			//camera looks down -z (basically at the player's feet) when pitch is at zero.
-			pitch = std::min(pitch, 0.95f * 3.1415926f);
-			pitch = std::max(pitch, 0.05f * 3.1415926f);
+			pitch = std::min(pitch, 0.65f * 3.1415926f);
+			pitch = std::max(pitch, 0.2f * 3.1415926f);
 			player.camera->transform->rotation = glm::angleAxis(pitch, glm::vec3(1.0f, 0.0f, 0.0f));
 
 			return true;
@@ -159,22 +159,26 @@ void PlayMode::update(float elapsed) {
 	if (cooldown > 0.0f) {
 		cooldown = std::max(cooldown - elapsed, 0.0f);
 	}
-	if (action.pressed && cooldown == 0.0f){
-
-		for (uint32_t i=0; i<16; i++){
-			if (glm::length(player.transform->position - zees[i]->position) < 6.0f){
-				int nexti = next[i];
-				player.at = walkmesh->nearest_walk_point(zees[nexti]->position);
-				player.transform->rotation = glm::angleAxis(glm::radians(90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
-				player.transform->rotation *= glm::angleAxis(2.09f * (nexti % 3) , glm::vec3(0.0f, 0.0f, 1.0f));
-				cooldown = 1.0f;
-				if (nexti == 15){
-					prompts.push(Prompt("You win!", 10.0f));
+	closeto = false;
+	if (cooldown == 0.0f){
+		for (uint32_t i=0; i<15; i++){
+			if (glm::length(player.transform->position - zees[i]->position) < 4.0f){
+				closeto = true;
+				if (action.pressed){
+					int nexti = next[i];
+					player.at = walkmesh->nearest_walk_point(zees[nexti]->position);
+					player.transform->rotation = glm::angleAxis(glm::radians(90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
+					player.transform->rotation *= glm::angleAxis(-1.05f +2.09f * ((nexti) % 3) , glm::vec3(0.0f, 0.0f, 1.0f));
+					cooldown = 1.0f;
+					if (nexti == 15){
+						prompts.push(Prompt("You made it out!", 10.0f));
+					}
+					break;
 				}
-				break;
 			}
 		}
 	}
+
 
 	//player walking:
 	{
@@ -247,7 +251,6 @@ void PlayMode::update(float elapsed) {
 
 		//update player's position to respect walking:
 		player.transform->position = walkmesh->to_world_point(player.at);
-		//std::cout << player.transform->position.x << "\n"; 
 
 		{ //update player's rotation to respect local (smooth) up-vector:
 			
@@ -336,6 +339,13 @@ void PlayMode::draw(glm::uvec2 const &drawable_size) {
 			float ofs = 2.0f / drawable_size.y;
 			lines.draw_text(prompts.front().text,
 				glm::vec3(0.1f -aspect + 0.1f * H + ofs, 0.1 -1.0 + + 0.1f * H + ofs, 0.0),
+				glm::vec3(H, 0.0f, 0.0f), glm::vec3(0.0f, H, 0.0f),
+				glm::u8vec4(0xff, 0xff, 0xff, 0x00));
+		}
+		if (closeto){
+			float ofs = 2.0f / drawable_size.y;
+			lines.draw_text("Press f to move to next area",
+				glm::vec3(1.2f -aspect + 0.1f * H + ofs, 0.5f -1.0 + + 0.1f * H + ofs, 0.0),
 				glm::vec3(H, 0.0f, 0.0f), glm::vec3(0.0f, H, 0.0f),
 				glm::u8vec4(0xff, 0xff, 0xff, 0x00));
 		}
