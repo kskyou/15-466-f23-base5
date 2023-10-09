@@ -1,4 +1,4 @@
-# (TODO: your game's title)
+# Mountainous Maze
 
 Author: Kevin You
 
